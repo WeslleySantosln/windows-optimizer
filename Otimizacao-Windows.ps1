@@ -426,7 +426,66 @@ try {
 # ============================================
 # 14. COPIAR PASTA MICRO PARA DOCUMENTOS
 # ============================================
+
+Write-Step "Baixando pasta 'micro' do GitHub..."
+
+$repoZipUrl = "https://github.com/USUARIO/REPOSITORIO/archive/refs/heads/main.zip"
+$tempZip = "$env:TEMP\repo.zip"
+$tempExtract = "$env:TEMP\repo_extract"
+
+Invoke-WebRequest -Uri $repoZipUrl -OutFile $tempZip
+
+Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+
+# Ajuste o nome conforme o repositório
+$repoFolderName = "REPOSITORIO-main"
+$microSourcePath = Join-Path $tempExtract "$repoFolderName\micro"
+
+$documentsPath = [Environment]::GetFolderPath("MyDocuments")
+$microDestPath = Join-Path $documentsPath "micro"
+
+if (-not (Test-Path $microSourcePath)) {
+    throw "Pasta 'micro' não encontrada no repositório."
+}
+
+if (Test-Path $microDestPath) {
+    Remove-Item $microDestPath -Recurse -Force
+}
+
+Copy-Item -Path $microSourcePath -Destination $microDestPath -Recurse -Force
+
+Write-Success "Pasta 'micro' baixada e copiada para Documentos"
 Write-Step "Copiando pasta 'micro' para Documentos..."
+
+Write-Step "Baixando pasta 'micro' do GitHub..."
+
+$repoZipUrl = "https://github.com/USUARIO/REPOSITORIO/archive/refs/heads/main.zip"
+$tempZip = "$env:TEMP\repo.zip"
+$tempExtract = "$env:TEMP\repo_extract"
+
+Invoke-WebRequest -Uri $repoZipUrl -OutFile $tempZip
+
+Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+
+# Ajuste o nome conforme o repositório
+$repoFolderName = "REPOSITORIO-main"
+$microSourcePath = Join-Path $tempExtract "$repoFolderName\micro"
+
+$documentsPath = [Environment]::GetFolderPath("MyDocuments")
+$microDestPath = Join-Path $documentsPath "micro"
+
+if (-not (Test-Path $microSourcePath)) {
+    throw "Pasta 'micro' não encontrada no repositório."
+}
+
+if (Test-Path $microDestPath) {
+    Remove-Item $microDestPath -Recurse -Force
+}
+
+Copy-Item -Path $microSourcePath -Destination $microDestPath -Recurse -Force
+
+Write-Success "Pasta 'micro' baixada e copiada para Documentos"
+
 
 try {
     # Caminho da pasta micro (na mesma pasta do script)
