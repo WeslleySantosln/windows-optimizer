@@ -446,6 +446,76 @@ try {
         
         Copy-Item -Path $microSourcePath -Destination $microDestPath -Recurse -Force
         Write-Success "Pasta 'micro' copiada para: $microDestPath"
+        
+        # ============================================
+        # CONFIGURAR PAPEL DE PAREDE E TELA DE BLOQUEIO
+        # ============================================
+        Write-Step "Configurando papel de parede e tela de bloqueio..."
+        
+        # Caminho da imagem
+        $wallpaperFileName = "foto_de_fundo_grupoprima.png"
+        $wallpaperPath = Join-Path $microDestPath $wallpaperFileName
+        
+        # Verificar se a imagem existe
+        if (Test-Path $wallpaperPath) {
+            try {
+                # Adicionar tipo para manipular wallpaper
+                Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+public class Wallpaper {
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+}
+"@
+                
+                # Definir papel de parede da área de trabalho
+                $SPI_SETDESKWALLPAPER = 0x0014
+                $UpdateIniFile = 0x01
+                $SendChangeEvent = 0x02
+                $fWinIni = $UpdateIniFile -bor $SendChangeEvent
+                
+                [Wallpaper]::SystemParametersInfo($SPI_SETDESKWALLPAPER, 0, $wallpaperPath, $fWinIni) | Out-Null
+                Write-Success "Papel de parede da área de trabalho configurado"
+                
+                # Configurar tela de bloqueio via registro
+                $lockScreenPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"
+                if (!(Test-Path $lockScreenPath)) {
+                    New-Item -Path $lockScreenPath -Force | Out-Null
+                }
+                
+                # Definir imagem da tela de bloqueio
+                Set-ItemProperty -Path $lockScreenPath -Name "LockScreenImage" -Value $wallpaperPath -Type String -Force
+                
+                # Também configurar para o usuário atual
+                $userLockScreenPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Lock Screen"
+                if (!(Test-Path $userLockScreenPath)) {
+                    New-Item -Path $userLockScreenPath -Force | Out-Null
+                }
+                
+                # Copiar a imagem para o local padrão do Windows
+                $wallpaperDestPath = "$env:APPDATA\Microsoft\Windows\Themes"
+                if (!(Test-Path $wallpaperDestPath)) {
+                    New-Item -Path $wallpaperDestPath -ItemType Directory -Force | Out-Null
+                }
+                Copy-Item -Path $wallpaperPath -Destination "$wallpaperDestPath\TranscodedWallpaper" -Force
+                
+                # Configurar também via registro do usuário para garantir
+                $personalizationPath = "HKCU:\Control Panel\Desktop"
+                Set-ItemProperty -Path $personalizationPath -Name "Wallpaper" -Value $wallpaperPath -Force
+                
+                Write-Success "Tela de bloqueio configurada"
+                Write-Host "  A tela de bloqueio será aplicada após reiniciar o computador"
+                
+            } catch {
+                Write-Error-Custom "Erro ao configurar papéis de parede: $_"
+            }
+        } else {
+            Write-Host "  Imagem '$wallpaperFileName' não encontrada na pasta 'micro'"
+            Write-Host "  Pulando configuração de papel de parede..."
+        }
+        
     } else {
         Write-Host "  Pasta 'micro' não encontrada. Pulando esta etapa..."
         Write-Host "  Procurado em: $microSourcePath"
@@ -496,6 +566,7 @@ Write-ColorOutput Green "✓ Bloatware removido"
 Write-ColorOutput Green "✓ Windows Update configurado"
 Write-ColorOutput Green "✓ Google Chrome instalado"
 Write-ColorOutput Green "✓ Pasta 'micro' copiada para Documentos"
+Write-ColorOutput Green "✓ Papel de parede e tela de bloqueio configurados"
 Write-ColorOutput Green "✓ Sistema limpo"
 
 Write-Host "`n"
