@@ -1,19 +1,13 @@
 # 📁 Estrutura de Pastas - Windows Optimizer
 
-## 🎯 Como Organizar Seus Arquivos
-
-Para executar o script corretamente com todas as funcionalidades, organize seus arquivos assim:
-
 ```
 Pasta-Otimizacao/
 │
-├── Otimizacao-Windows.ps1      ← Script principal (obrigatório)
-├── Executar-Otimizacao.bat     ← Atalho para execução (opcional)
+├── Otimizacao-Windows.ps1      ← Script principal
+├── Executar-Otimizacao.bat     ← Atalho para execução
 │
-└── micro/                       ← Pasta a ser copiada (OPCIONAL)
-    ├── seus-arquivos.txt
-    ├── suas-pastas/
-    └── qualquer-conteudo...
+└── micro/                       ← Pasta com outros arquivos
+
 ```
 
 ---
