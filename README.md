@@ -34,20 +34,20 @@ Script completo de otimização do Windows para ser executado após formatação
 Abra o **PowerShell como Administrador** e execute:
 
 ```powershell
-irm https://raw.githubusercontent.com/SEU-USUARIO/windows-optimizer/main/Otimizacao-Windows.ps1 | iex
+irm https://raw.githubusercontent.com/weslleysantosln/windows-optimizer/main/Otimizacao-Windows.ps1 | iex
 ```
 
 ### Método 2: Usando o Instalador
 
 ```powershell
-irm https://raw.githubusercontent.com/SEU-USUARIO/windows-optimizer/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/weslleysantosln/windows-optimizer/main/install.ps1 | iex
 ```
 
 ### Método 3: Download Manual
 
 ```powershell
 # Baixar o script
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/SEU-USUARIO/windows-optimizer/main/Otimizacao-Windows.ps1" -OutFile "Otimizacao-Windows.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/weslleysantosln/windows-optimizer/main/Otimizacao-Windows.ps1" -OutFile "Otimizacao-Windows.ps1"
 
 # Executar
 Set-ExecutionPolicy Bypass -Scope Process -Force
