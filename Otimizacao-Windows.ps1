@@ -429,24 +429,33 @@ try {
 
 Write-Step "Baixando pasta 'micro' do GitHub..."
 
-$repoZipUrl = "https://github.com/USUARIO/REPOSITORIO/archive/refs/heads/main.zip"
+$repoZipUrl = "https://github.com/WeslleySantosIn/SEU_REPOSITORIO/archive/refs/heads/main.zip"
 $tempZip = "$env:TEMP\repo.zip"
 $tempExtract = "$env:TEMP\repo_extract"
 
-Invoke-WebRequest -Uri $repoZipUrl -OutFile $tempZip
+Invoke-WebRequest -Uri $repoZipUrl -OutFile $tempZip -UseBasicParsing
+
+if (Test-Path $tempExtract) {
+    Remove-Item $tempExtract -Recurse -Force
+}
 
 Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
 
-# Ajuste o nome conforme o repositório
-$repoFolderName = "REPOSITORIO-main"
-$microSourcePath = Join-Path $tempExtract "$repoFolderName\micro"
+# 🔑 Descobrir automaticamente a pasta raiz extraída
+$repoRoot = Get-ChildItem $tempExtract | Where-Object { $_.PSIsContainer } | Select-Object -First 1
+
+if (-not $repoRoot) {
+    throw "Não foi possível identificar a pasta raiz do repositório."
+}
+
+$microSourcePath = Join-Path $repoRoot.FullName "micro"
+
+if (-not (Test-Path $microSourcePath)) {
+    throw "A pasta 'micro' não foi encontrada dentro do repositório."
+}
 
 $documentsPath = [Environment]::GetFolderPath("MyDocuments")
 $microDestPath = Join-Path $documentsPath "micro"
-
-if (-not (Test-Path $microSourcePath)) {
-    throw "Pasta 'micro' não encontrada no repositório."
-}
 
 if (Test-Path $microDestPath) {
     Remove-Item $microDestPath -Recurse -Force
@@ -454,57 +463,8 @@ if (Test-Path $microDestPath) {
 
 Copy-Item -Path $microSourcePath -Destination $microDestPath -Recurse -Force
 
-Write-Success "Pasta 'micro' baixada e copiada para Documentos"
-Write-Step "Copiando pasta 'micro' para Documentos..."
+Write-Success "Pasta 'micro' copiada com sucesso para Documentos"
 
-Write-Step "Baixando pasta 'micro' do GitHub..."
-
-$repoZipUrl = "https://github.com/USUARIO/REPOSITORIO/archive/refs/heads/main.zip"
-$tempZip = "$env:TEMP\repo.zip"
-$tempExtract = "$env:TEMP\repo_extract"
-
-Invoke-WebRequest -Uri $repoZipUrl -OutFile $tempZip
-
-Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
-
-# Ajuste o nome conforme o repositório
-$repoFolderName = "REPOSITORIO-main"
-$microSourcePath = Join-Path $tempExtract "$repoFolderName\micro"
-
-$documentsPath = [Environment]::GetFolderPath("MyDocuments")
-$microDestPath = Join-Path $documentsPath "micro"
-
-if (-not (Test-Path $microSourcePath)) {
-    throw "Pasta 'micro' não encontrada no repositório."
-}
-
-if (Test-Path $microDestPath) {
-    Remove-Item $microDestPath -Recurse -Force
-}
-
-Copy-Item -Path $microSourcePath -Destination $microDestPath -Recurse -Force
-
-Write-Success "Pasta 'micro' baixada e copiada para Documentos"
-
-
-try {
-    # Caminho da pasta micro (na mesma pasta do script)
-    $microSourcePath = Join-Path $PSScriptRoot "micro"
-    
-    # Caminho de destino (Documentos do usuário)
-    $documentsPath = [Environment]::GetFolderPath("MyDocuments")
-    $microDestPath = Join-Path $documentsPath "micro"
-    
-    # Verificar se a pasta micro existe
-    if (Test-Path $microSourcePath) {
-        # Copiar a pasta
-        if (Test-Path $microDestPath) {
-            Write-Host "  Pasta 'micro' já existe em Documentos. Sobrescrevendo..."
-            Remove-Item $microDestPath -Recurse -Force -ErrorAction SilentlyContinue
-        }
-        
-        Copy-Item -Path $microSourcePath -Destination $microDestPath -Recurse -Force
-        Write-Success "Pasta 'micro' copiada para: $microDestPath"
         
         # ============================================
         # CONFIGURAR PAPEL DE PAREDE E TELA DE BLOQUEIO
