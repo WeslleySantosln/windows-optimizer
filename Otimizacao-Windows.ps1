@@ -423,6 +423,180 @@ try {
     Write-Host "  Você pode instalar manualmente em: https://www.google.com/chrome/"
 }
 
+# ===========================================
+# 14. DESATIVA O WIDGET DE NOTICIA
+# ===========================================
+
+#Requires -RunAsAdministrator
+
+Write-Host "[*] Desativando 'Informações e Notícias' do Windows 10..."
+
+$regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds"
+
+if (!(Test-Path $regPath)) {
+    New-Item -Path $regPath -Force | Out-Null
+}
+
+# Desativar completamente o recurso
+Set-ItemProperty -Path $regPath -Name "EnableFeeds" -Type DWord -Value 0 -Force
+
+# Também desativar no usuário atual (reforço)
+$userPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Feeds"
+if (!(Test-Path $userPath)) {
+    New-Item -Path $userPath -Force | Out-Null
+}
+Set-ItemProperty -Path $userPath -Name "ShellFeedsTaskbarViewMode" -Type DWord -Value 2 -Force
+
+Write-Host "[✓] Informações e Notícias desativado"
+Write-Host "    Reinicie o Explorer ou o computador para aplicar."
+
+
+# =============================================
+# 14. DESATIVANDO O WINDOWS COPILOT
+#==============================================
+#Requires -RunAsAdministrator
+
+Write-Host "[*] Desativando Windows Copilot..."
+
+# 1. Desativar via Política (oficial)
+$copilotPolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot"
+
+if (!(Test-Path $copilotPolicyPath)) {
+    New-Item -Path $copilotPolicyPath -Force | Out-Null
+}
+
+Set-ItemProperty -Path $copilotPolicyPath -Name "TurnOffWindowsCopilot" -Type DWord -Value 1 -Force
+
+# 2. Remover botão da barra de tarefas (usuário)
+$userCopilotPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+Set-ItemProperty -Path $userCopilotPath -Name "ShowCopilotButton" -Type DWord -Value 0 -Force -ErrorAction SilentlyContinue
+
+# 3. Remover Copilot AppX (se existir)
+$copilotPackages = Get-AppxPackage -AllUsers | Where-Object {
+    $_.Name -match "Copilot"
+}
+
+foreach ($pkg in $copilotPackages) {
+    Write-Host "    Removendo pacote: $($pkg.Name)"
+    Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction SilentlyContinue
+}
+
+Write-Host "[✓] Copilot desativado / removido"
+Write-Host "    Reinicie o Explorer ou o computador."
+
+#============================================
+#16. DESABILITA E DESINSTALA O ONE DRIVE
+#============================================
+
+Write-Host "=== DESATIVANDO E REMOVENDO O ONEDRIVE ===" -ForegroundColor Cyan
+
+# 1. Encerrar processo do OneDrive
+Write-Host "Encerrando processos do OneDrive..."
+Get-Process OneDrive -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# 2. Desabilitar inicialização automática (Registro)
+Write-Host "Removendo OneDrive da inicialização..."
+$runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+Remove-ItemProperty -Path $runKey -Name "OneDrive" -ErrorAction SilentlyContinue
+
+# 3. Bloquear OneDrive via Política de Grupo (Registro)
+Write-Host "Aplicando política para desativar o OneDrive..."
+$policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive"
+if (!(Test-Path $policyPath)) {
+    New-Item -Path $policyPath -Force | Out-Null
+}
+
+Set-ItemProperty -Path $policyPath -Name "DisableFileSyncNGSC" -Type DWord -Value 1
+
+# 4. Desativar tarefas agendadas do OneDrive
+Write-Host "Desativando tarefas agendadas..."
+Get-ScheduledTask | Where-Object {
+    $_.TaskName -like "*OneDrive*"
+} | Disable-ScheduledTask -ErrorAction SilentlyContinue
+
+# 5. Desinstalar OneDrive (32 e 64 bits)
+Write-Host "Desinstalando OneDrive..."
+
+$onedriveSetup32 = "$env:SystemRoot\System32\OneDriveSetup.exe"
+$onedriveSetup64 = "$env:SystemRoot\SysWOW64\OneDriveSetup.exe"
+
+if (Test-Path $onedriveSetup64) {
+    Start-Process $onedriveSetup64 "/uninstall" -Wait
+} elseif (Test-Path $onedriveSetup32) {
+    Start-Process $onedriveSetup32 "/uninstall" -Wait
+}
+
+# 6. Remover pastas residuais
+Write-Host "Removendo pastas restantes..."
+$folders = @(
+    "$env:USERPROFILE\OneDrive",
+    "$env:LOCALAPPDATA\Microsoft\OneDrive",
+    "$env:PROGRAMDATA\Microsoft OneDrive"
+)
+
+foreach ($folder in $folders) {
+    if (Test-Path $folder) {
+        Remove-Item $folder -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# 7. Ocultar OneDrive do Explorador de Arquivos
+Write-Host "Ocultando OneDrive do Explorer..."
+$clsidPath = "HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
+if (Test-Path $clsidPath) {
+    Set-ItemProperty -Path $clsidPath -Name "System.IsPinnedToNameSpaceTree" -Value 0 -ErrorAction SilentlyContinue
+}
+
+Write-Host "✔ OneDrive desativado e removido com sucesso." -ForegroundColor Green
+
+
+# ============================================
+# 17. DESABILITA E DESINSTALA O OUTLOOK
+# ============================================
+Write-Host "=== DESINSTALANDO MICROSOFT OUTLOOK ===" -ForegroundColor Cyan
+
+# 1. Encerrar processos do Outlook
+Write-Host "Encerrando processos do Outlook..."
+Get-Process OUTLOOK -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# 2. Localizar Office Click-to-Run
+$officeC2R = "C:\Program Files\Common Files\Microsoft Shared\ClickToRun\OfficeClickToRun.exe"
+
+if (!(Test-Path $officeC2R)) {
+    Write-Error "Office Click-to-Run não encontrado. Outlook pode não estar instalado via Microsoft 365."
+    exit 1
+}
+
+# 3. Remover SOMENTE o Outlook
+Write-Host "Iniciando remoção do Outlook (mantendo Word, Excel etc)..."
+
+Start-Process $officeC2R `
+    -ArgumentList "scenario=install scenariosubtype=ARP sourcetype=None productstoremove=OutlookRetail.16_en-us displaylevel=false" `
+    -Wait
+
+# 4. Limpar atalhos
+Write-Host "Removendo atalhos..."
+$shortcuts = @(
+    "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Outlook.lnk",
+    "$env:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\Outlook.lnk"
+)
+
+foreach ($s in $shortcuts) {
+    if (Test-Path $s) {
+        Remove-Item $s -Force
+    }
+}
+
+# 5. Remover inicialização automática (se existir)
+Write-Host "Limpando inicialização..."
+$runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+Remove-ItemProperty -Path $runKey -Name "Outlook" -ErrorAction SilentlyContinue
+
+Write-Host "✔ Outlook desinstalado com sucesso." -ForegroundColor Green
+
+
+
+
 # ============================================
 # 14. COPIAR PASTA MICRO PARA DOCUMENTOS
 # ============================================
