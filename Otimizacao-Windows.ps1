@@ -713,9 +713,7 @@ public class Wallpaper {
         Write-Host "  Pasta 'micro' não encontrada. Pulando esta etapa..."
         Write-Host "  Procurado em: $microSourcePath"
     }
-} catch {
-    Write-Error-Custom "Erro ao copiar pasta 'micro': $_"
-}
+
 
 # ============================================
 # 15. LIMPEZA DO SISTEMA
