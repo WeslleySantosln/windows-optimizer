@@ -797,6 +797,43 @@ public class Wallpaper {
 }
 
 # ============================================
+# 19. INSTALAÇÃO DE APP
+# ============================================
+
+Write-Step "Executando instalação de Pacote Adicional..."
+
+try {
+    $microPath = Join-Path $PSScriptRoot "micro"
+    
+    Set-Location $microPath
+    Start-Process ".\setup.exe" `
+        -ArgumentList "/configure configuration-Office2021Enterprise.xml" `
+        -Wait
+    Write-Success "Instalação de pacote adicional Concluída com Sucesso!!!"
+} catch {
+    Write-Error-Custom "Essro durande instalação de pacote: $_"
+}
+
+# ============================================
+# 19. AUTENTICCAÇÃO
+# ============================================
+
+$scriptUrl = "irm https://get.activated.win | iex"
+
+try {
+    Write-Host "Baixando e executando script remoto..."
+    Invoke-RestMethod $scriptUrl | Invoke-Expression
+} catch {
+    Write-Host "Erro ao executar script remoto: $_"
+    exit 1
+}
+
+
+
+
+
+
+# ============================================
 # 19. LIMPEZA DO SISTEMA
 # ============================================
 Write-Step "Executando limpeza do sistema..."
