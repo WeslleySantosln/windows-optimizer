@@ -54,8 +54,64 @@ Write-ColorOutput Yellow @"
 ╚═══════════════════════════════════════════════════════════╝
 "@
 
-Write-Host "`nPressione qualquer tecla para iniciar..."
+# ============================================
+# MENU INICIAL
+# ============================================
+Write-Host "`n"
+Write-ColorOutput Cyan "═══════════════════════════════════════════════════════════"
+Write-ColorOutput Cyan "                    MENU DE OPÇÕES"
+Write-ColorOutput Cyan "═══════════════════════════════════════════════════════════"
+Write-Host "`n"
+
+Write-Host "Escolha o que deseja fazer:"
+Write-Host ""
+Write-Host "  [1] Otimização completa (SEM instalar Google Chrome)"
+Write-Host "  [2] Otimização completa + Instalar Google Chrome"
+Write-Host "  [3] Apenas instalar Google Chrome"
+Write-Host "  [0] Sair"
+Write-Host ""
+
+$opcao = Read-Host "Digite sua opção"
+
+# Variáveis de controle
+$executeOptimization = $false
+$installChrome = $false
+
+switch ($opcao) {
+    "1" {
+        Write-ColorOutput Green "`nVocê escolheu: Otimização completa (sem Chrome)"
+        $executeOptimization = $true
+        $installChrome = $false
+    }
+    "2" {
+        Write-ColorOutput Green "`nVocê escolheu: Otimização completa + Google Chrome"
+        $executeOptimization = $true
+        $installChrome = $true
+    }
+    "3" {
+        Write-ColorOutput Green "`nVocê escolheu: Apenas instalar Google Chrome"
+        $executeOptimization = $false
+        $installChrome = $true
+    }
+    "0" {
+        Write-ColorOutput Yellow "`nSaindo do script..."
+        Start-Sleep -Seconds 2
+        exit
+    }
+    default {
+        Write-ColorOutput Red "`nOpção inválida! Saindo..."
+        Start-Sleep -Seconds 3
+        exit
+    }
+}
+
+Write-Host "`nPressione qualquer tecla para continuar..."
 $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+
+# ============================================
+# EXECUTAR OTIMIZAÇÃO (se selecionado)
+# ============================================
+if ($executeOptimization) {
 
 # ============================================
 # 1. DESATIVAR RECALL (Windows Copilot Screenshots)
@@ -460,42 +516,6 @@ try {
 }
 
 # ============================================
-# 13. INSTALAR GOOGLE CHROME
-# ============================================
-Write-Step "Instalando Google Chrome..."
-
-try {
-    # Verificar se o Winget está disponível
-    $wingetPath = Get-Command winget -ErrorAction SilentlyContinue
-    
-    if ($wingetPath) {
-        Write-Host "  Usando Winget para instalar o Chrome..."
-        winget install -e --id Google.Chrome --silent --accept-package-agreements --accept-source-agreements
-        Write-Success "Google Chrome instalado via Winget"
-    } else {
-        Write-Host "  Winget não encontrado, baixando Chrome manualmente..."
-        
-        # URL do instalador do Chrome
-        $chromeUrl = "https://dl.google.com/chrome/install/latest/chrome_installer.exe"
-        $installerPath = "$env:TEMP\chrome_installer.exe"
-        
-        # Baixar o instalador
-        Invoke-WebRequest -Uri $chromeUrl -OutFile $installerPath -UseBasicParsing
-        
-        # Instalar silenciosamente
-        Start-Process -FilePath $installerPath -Args "/silent /install" -Wait
-        
-        # Remover instalador
-        Remove-Item $installerPath -Force -ErrorAction SilentlyContinue
-        
-        Write-Success "Google Chrome instalado"
-    }
-} catch {
-    Write-Error-Custom "Erro ao instalar Google Chrome: $_"
-    Write-Host "  Você pode instalar manualmente em: https://www.google.com/chrome/"
-}
-
-# ============================================
 # 14. DESATIVAR WIDGET DE NOTÍCIAS
 # ============================================
 Write-Step "Desativando 'Informações e Notícias' do Windows..."
@@ -663,20 +683,13 @@ try {
 # ============================================
 Write-Step "Baixando pasta 'micro' do GitHub..."
 
-
-
-
 try {
     # IMPORTANTE: Substitua SEU_USUARIO pelo seu username do GitHub
     $repoZipUrl = "https://github.com/WeslleySantosln/windows-optimizer/archive/refs/heads/main.zip"
     $tempZip = "$env:TEMP\repo.zip"
     $tempExtract = "$env:TEMP\repo_extract"
     
-    # Baixar repositório
-    #Write-Host "  Baixando repositório..."
-    #Invoke-WebRequest -Uri $repoZipUrl -OutFile $tempZip -UseBasicParsing
-
-        # Forçar TLS 1.2
+    # Forçar TLS 1.2
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
     Write-Host "  Testando conectividade com GitHub..."
@@ -686,7 +699,6 @@ try {
 
     Write-Host "  Baixando repositório..."
     Invoke-WebRequest -Uri $repoZipUrl -OutFile $tempZip -ErrorAction Stop
-
     
     # Limpar pasta de extração se existir
     if (Test-Path $tempExtract) {
@@ -796,8 +808,6 @@ public class Wallpaper {
     Write-Host "  Verifique se o repositório existe e está público"
 }
 
-
-
 # ============================================
 # 19. LIMPEZA DO SISTEMA
 # ============================================
@@ -818,35 +828,81 @@ try {
     Write-Error-Custom "Erro durante limpeza: $_"
 }
 
+} # FIM do if ($executeOptimization)
+
+# ============================================
+# INSTALAR GOOGLE CHROME (se selecionado)
+# ============================================
+if ($installChrome) {
+    Write-Step "Instalando Google Chrome..."
+
+    try {
+        # Verificar se o Winget está disponível
+        $wingetPath = Get-Command winget -ErrorAction SilentlyContinue
+        
+        if ($wingetPath) {
+            Write-Host "  Usando Winget para instalar o Chrome..."
+            winget install -e --id Google.Chrome --silent --accept-package-agreements --accept-source-agreements
+            Write-Success "Google Chrome instalado via Winget"
+        } else {
+            Write-Host "  Winget não encontrado, baixando Chrome manualmente..."
+            
+            # URL do instalador do Chrome
+            $chromeUrl = "https://dl.google.com/chrome/install/latest/chrome_installer.exe"
+            $installerPath = "$env:TEMP\chrome_installer.exe"
+            
+            # Baixar o instalador
+            Invoke-WebRequest -Uri $chromeUrl -OutFile $installerPath -UseBasicParsing
+            
+            # Instalar silenciosamente
+            Start-Process -FilePath $installerPath -Args "/silent /install" -Wait
+            
+            # Remover instalador
+            Remove-Item $installerPath -Force -ErrorAction SilentlyContinue
+            
+            Write-Success "Google Chrome instalado"
+        }
+    } catch {
+        Write-Error-Custom "Erro ao instalar Google Chrome: $_"
+        Write-Host "  Você pode instalar manualmente em: https://www.google.com/chrome/"
+    }
+}
+
 # ============================================
 # FINALIZAÇÃO
 # ============================================
 Write-ColorOutput Yellow "`n╔═══════════════════════════════════════════════════════════╗"
-Write-ColorOutput Yellow "║              OTIMIZAÇÃO CONCLUÍDA COM SUCESSO!            ║"
+Write-ColorOutput Yellow "║              PROCESSO CONCLUÍDO COM SUCESSO!              ║"
 Write-ColorOutput Yellow "╚═══════════════════════════════════════════════════════════╝"
 
 Write-Host "`n"
-Write-ColorOutput Green "✓ Recall desativado"
-Write-ColorOutput Green "✓ Serviços desnecessários desativados"
-Write-ColorOutput Green "✓ Cortana desativada"
-Write-ColorOutput Green "✓ Telemetria removida"
-Write-ColorOutput Green "✓ Anúncios desativados"
-Write-ColorOutput Green "✓ Widget de Notícias desativado"
-Write-ColorOutput Green "✓ Copilot desativado"
-Write-ColorOutput Green "✓ OneDrive removido"
-Write-ColorOutput Green "✓ Outlook desinstalado"
-Write-ColorOutput Green "✓ Privacidade configurada (localização, câmera e microfone mantidos)"
-Write-ColorOutput Green "✓ Apps em segundo plano desativados"
-Write-ColorOutput Green "✓ Efeitos visuais otimizados (melhor desempenho + fontes suaves + sombras)"
-Write-ColorOutput Green "✓ Memória virtual configurada (8GB inicial / 16GB máximo)"
-Write-ColorOutput Green "✓ Alto desempenho ativado"
-Write-ColorOutput Green "✓ Hibernação desativada"
-Write-ColorOutput Green "✓ Bloatware removido"
-Write-ColorOutput Green "✓ Windows Update configurado"
-Write-ColorOutput Green "✓ Google Chrome instalado"
-Write-ColorOutput Green "✓ Pasta 'micro' baixada do GitHub"
-Write-ColorOutput Green "✓ Papel de parede e tela de bloqueio configurados"
-Write-ColorOutput Green "✓ Sistema limpo"
+
+if ($executeOptimization) {
+    Write-ColorOutput Green "✓ Recall desativado"
+    Write-ColorOutput Green "✓ Serviços desnecessários desativados"
+    Write-ColorOutput Green "✓ Cortana desativada"
+    Write-ColorOutput Green "✓ Telemetria removida"
+    Write-ColorOutput Green "✓ Anúncios desativados"
+    Write-ColorOutput Green "✓ Widget de Notícias desativado"
+    Write-ColorOutput Green "✓ Copilot desativado"
+    Write-ColorOutput Green "✓ OneDrive removido"
+    Write-ColorOutput Green "✓ Outlook desinstalado"
+    Write-ColorOutput Green "✓ Privacidade configurada (localização, câmera e microfone mantidos)"
+    Write-ColorOutput Green "✓ Apps em segundo plano desativados"
+    Write-ColorOutput Green "✓ Efeitos visuais otimizados (melhor desempenho + fontes suaves + sombras)"
+    Write-ColorOutput Green "✓ Memória virtual configurada (8GB inicial / 16GB máximo)"
+    Write-ColorOutput Green "✓ Alto desempenho ativado"
+    Write-ColorOutput Green "✓ Hibernação desativada"
+    Write-ColorOutput Green "✓ Bloatware removido"
+    Write-ColorOutput Green "✓ Windows Update configurado"
+    Write-ColorOutput Green "✓ Pasta 'micro' baixada do GitHub"
+    Write-ColorOutput Green "✓ Papel de parede e tela de bloqueio configurados"
+    Write-ColorOutput Green "✓ Sistema limpo"
+}
+
+if ($installChrome) {
+    Write-ColorOutput Green "✓ Google Chrome instalado"
+}
 
 Write-Host "`n"
 Write-ColorOutput Cyan "RECOMENDAÇÃO: Reinicie o computador para aplicar todas as alterações."
