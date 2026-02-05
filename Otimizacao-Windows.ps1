@@ -663,15 +663,30 @@ try {
 # ============================================
 Write-Step "Baixando pasta 'micro' do GitHub..."
 
+
+
+
 try {
     # IMPORTANTE: Substitua SEU_USUARIO pelo seu username do GitHub
-    $repoZipUrl = "https://github.com/WeslleySantosIn/windows-optimizer/archive/refs/heads/main.zip"
+    $repoZipUrl = "https://github.com/WeslleySantosln/windows-optimizer/archive/refs/heads/main.zip"
     $tempZip = "$env:TEMP\repo.zip"
     $tempExtract = "$env:TEMP\repo_extract"
     
     # Baixar repositório
+    #Write-Host "  Baixando repositório..."
+    #Invoke-WebRequest -Uri $repoZipUrl -OutFile $tempZip -UseBasicParsing
+
+        # Forçar TLS 1.2
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+    Write-Host "  Testando conectividade com GitHub..."
+    if (-not (Test-NetConnection github.com -Port 443 -InformationLevel Quiet)) {
+        throw "Não foi possível resolver/conectar ao github.com"
+    }
+
     Write-Host "  Baixando repositório..."
-    Invoke-WebRequest -Uri $repoZipUrl -OutFile $tempZip -UseBasicParsing
+    Invoke-WebRequest -Uri $repoZipUrl -OutFile $tempZip -ErrorAction Stop
+
     
     # Limpar pasta de extração se existir
     if (Test-Path $tempExtract) {
