@@ -796,55 +796,6 @@ public class Wallpaper {
     Write-Host "  Verifique se o repositório existe e está público"
 }
 
-$edgePaths = @(
-    "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
-    "$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe"
-)
-
-$edgeExe = $edgePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
-
-if ($edgeExe) {
-    Start-Process $edgeExe "https://drive.google.com/drive/folders/1k5BSZVLmBrR4-FLR8yjY1saCR97yv4fD?usp=drive_link"
-} else {
-    Write-Host "Microsoft Edge não encontrado"
-}
-
-
-# ============================================
-# 19. INSTALAÇÃO DE APP
-# ============================================
-
-Write-Step "Executando instalação de Pacote Adicional..."
-
-try {
-    $microPath = Join-Path $PSScriptRoot "micro"
-    
-    Set-Location $microPath
-    Start-Process ".\setup.exe" `
-        -ArgumentList "/configure configuration-Office2021Enterprise.xml" `
-        -Wait
-    Write-Success "Instalação de pacote adicional Concluída com Sucesso!!!"
-} catch {
-    Write-Error-Custom "Essro durande instalação de pacote: $_"
-}
-
-# ============================================
-# 19. AUTENTICCAÇÃO
-# ============================================
-
-$scriptUrl = "irm https://get.activated.win | iex"
-
-try {
-    Write-Host "Baixando e executando script remoto..."
-    Invoke-RestMethod $scriptUrl | Invoke-Expression
-} catch {
-    Write-Host "Erro ao executar script remoto: $_"
-    exit 1
-}
-
-
-
-
 
 
 # ============================================
