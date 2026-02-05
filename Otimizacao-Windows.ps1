@@ -214,11 +214,7 @@ try {
 Write-Step "Configurando opções de privacidade..."
 
 try {
-    # Localização mantida ativa (conforme solicitado pelo usuário)
-    
-    # Câmera mantida ativa (conforme solicitado pelo usuário)
-    
-    # Microfone mantido ativo (conforme solicitado pelo usuário)
+    # Localização, câmera e microfone mantidos ativos (conforme solicitado)
     
     # Desativar sincronização
     $syncPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\SettingSync"
@@ -262,24 +258,100 @@ try {
 Write-Step "Otimizando configurações de desempenho..."
 
 try {
-    # Desativar efeitos visuais desnecessários
+    # Configurar para "Ajustar para obter um melhor desempenho"
+    # mas mantendo fontes suaves e sombras de ícones
+    
+    # Definir como personalizado (VisualFXSetting = 3)
     $visualPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects"
     if (!(Test-Path $visualPath)) {
         New-Item -Path $visualPath -Force | Out-Null
     }
-    Set-ItemProperty -Path $visualPath -Name "VisualFXSetting" -Value 2 -Type DWord -Force
+    Set-ItemProperty -Path $visualPath -Name "VisualFXSetting" -Value 3 -Type DWord -Force
+    
+    # Caminho principal dos efeitos visuais
+    $advancedPath = "HKCU:\Control Panel\Desktop"
+    $dwmPath = "HKCU:\Software\Microsoft\Windows\DWM"
+    $explorerAdvPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+    
+    # DESATIVAR todos os efeitos (melhor desempenho)
+    Set-ItemProperty -Path $advancedPath -Name "DragFullWindows" -Value "0" -Type String -Force
+    Set-ItemProperty -Path $advancedPath -Name "FontSmoothing" -Value "2" -Type String -Force  # Manter suavização
+    Set-ItemProperty -Path $advancedPath -Name "UserPreferencesMask" -Value ([byte[]](0x90,0x12,0x03,0x80,0x10,0x00,0x00,0x00)) -Type Binary -Force
+    
+    # Desativar animações de janela
+    Set-ItemProperty -Path $dwmPath -Name "EnableAeroPeek" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $dwmPath -Name "AlwaysHibernateThumbnails" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
     
     # Desativar transparência
     $personalizePath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
     Set-ItemProperty -Path $personalizePath -Name "EnableTransparency" -Value 0 -Type DWord -Force
     
-    # Desativar animações
-    $dwmPath = "HKCU:\Software\Microsoft\Windows\DWM"
-    Set-ItemProperty -Path $dwmPath -Name "EnableAeroPeek" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    # Configurações específicas do Explorer
+    Set-ItemProperty -Path $explorerAdvPath -Name "ListviewAlphaSelect" -Value 0 -Type DWord -Force
+    Set-ItemProperty -Path $explorerAdvPath -Name "ListviewShadow" -Value 1 -Type DWord -Force  # MANTER sombras de ícones
+    Set-ItemProperty -Path $explorerAdvPath -Name "TaskbarAnimations" -Value 0 -Type DWord -Force
     
-    Write-Success "Desempenho otimizado"
+    # SystemParametersInfo para aplicar algumas mudanças imediatamente
+    Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class VisualEffects {
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+}
+"@
+    
+    # SPI_SETFONTSMOOTHING = 0x004B (manter fontes suaves)
+    [VisualEffects]::SystemParametersInfo(0x004B, 2, [IntPtr]::Zero, 0x01 -bor 0x02) | Out-Null
+    
+    Write-Success "Efeitos visuais configurados (melhor desempenho + fontes suaves + sombras de ícones)"
+    
 } catch {
-    Write-Error-Custom "Erro ao otimizar desempenho: $_"
+    Write-Error-Custom "Erro ao otimizar desempenho visual: $_"
+}
+
+# ============================================
+# CONFIGURAR MEMÓRIA VIRTUAL (ARQUIVO DE PAGINAÇÃO)
+# ============================================
+Write-Step "Configurando memória virtual personalizada..."
+
+try {
+    # Tamanho inicial: 8000 MB (8 GB)
+    # Tamanho máximo: 16000 MB (16 GB)
+    
+    $initialSize = 8000
+    $maximumSize = 16000
+    
+    # Obter a letra da unidade do sistema (geralmente C:)
+    $systemDrive = $env:SystemDrive
+    
+    # Desabilitar gerenciamento automático
+    $computerSystem = Get-WmiObject Win32_ComputerSystem -EnableAllPrivileges
+    $computerSystem.AutomaticManagedPagefile = $false
+    $computerSystem.Put() | Out-Null
+    
+    # Configurar arquivo de paginação personalizado
+    $pageFile = Get-WmiObject -Query "SELECT * FROM Win32_PageFileSetting WHERE Name='$systemDrive\\pagefile.sys'"
+    
+    if ($pageFile) {
+        # Atualizar arquivo existente
+        $pageFile.InitialSize = $initialSize
+        $pageFile.MaximumSize = $maximumSize
+        $pageFile.Put() | Out-Null
+    } else {
+        # Criar novo arquivo de paginação
+        $pageFile = ([WMIClass]"root\cimv2:Win32_PageFileSetting").CreateInstance()
+        $pageFile.Name = "$systemDrive\pagefile.sys"
+        $pageFile.InitialSize = $initialSize
+        $pageFile.MaximumSize = $maximumSize
+        $pageFile.Put() | Out-Null
+    }
+    
+    Write-Success "Memória virtual configurada: Inicial=$initialSize MB, Máximo=$maximumSize MB"
+    Write-Host "  A configuração será aplicada após reiniciar o computador"
+    
+} catch {
+    Write-Error-Custom "Erro ao configurar memória virtual: $_"
 }
 
 # ============================================
@@ -423,233 +495,224 @@ try {
     Write-Host "  Você pode instalar manualmente em: https://www.google.com/chrome/"
 }
 
-# ===========================================
-# 14. DESATIVA O WIDGET DE NOTICIA
-# ===========================================
+# ============================================
+# 14. DESATIVAR WIDGET DE NOTÍCIAS
+# ============================================
+Write-Step "Desativando 'Informações e Notícias' do Windows..."
 
-#Requires -RunAsAdministrator
-
-Write-Host "[*] Desativando 'Informações e Notícias' do Windows 10..."
-
-$regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds"
-
-if (!(Test-Path $regPath)) {
-    New-Item -Path $regPath -Force | Out-Null
-}
-
-# Desativar completamente o recurso
-Set-ItemProperty -Path $regPath -Name "EnableFeeds" -Type DWord -Value 0 -Force
-
-# Também desativar no usuário atual (reforço)
-$userPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Feeds"
-if (!(Test-Path $userPath)) {
-    New-Item -Path $userPath -Force | Out-Null
-}
-Set-ItemProperty -Path $userPath -Name "ShellFeedsTaskbarViewMode" -Type DWord -Value 2 -Force
-
-Write-Host "[✓] Informações e Notícias desativado"
-Write-Host "    Reinicie o Explorer ou o computador para aplicar."
-
-
-# =============================================
-# 14. DESATIVANDO O WINDOWS COPILOT
-#==============================================
-#Requires -RunAsAdministrator
-
-Write-Host "[*] Desativando Windows Copilot..."
-
-# 1. Desativar via Política (oficial)
-$copilotPolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot"
-
-if (!(Test-Path $copilotPolicyPath)) {
-    New-Item -Path $copilotPolicyPath -Force | Out-Null
-}
-
-Set-ItemProperty -Path $copilotPolicyPath -Name "TurnOffWindowsCopilot" -Type DWord -Value 1 -Force
-
-# 2. Remover botão da barra de tarefas (usuário)
-$userCopilotPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
-Set-ItemProperty -Path $userCopilotPath -Name "ShowCopilotButton" -Type DWord -Value 0 -Force -ErrorAction SilentlyContinue
-
-# 3. Remover Copilot AppX (se existir)
-$copilotPackages = Get-AppxPackage -AllUsers | Where-Object {
-    $_.Name -match "Copilot"
-}
-
-foreach ($pkg in $copilotPackages) {
-    Write-Host "    Removendo pacote: $($pkg.Name)"
-    Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction SilentlyContinue
-}
-
-Write-Host "[✓] Copilot desativado / removido"
-Write-Host "    Reinicie o Explorer ou o computador."
-
-#============================================
-#16. DESABILITA E DESINSTALA O ONE DRIVE
-#============================================
-
-Write-Host "=== DESATIVANDO E REMOVENDO O ONEDRIVE ===" -ForegroundColor Cyan
-
-# 1. Encerrar processo do OneDrive
-Write-Host "Encerrando processos do OneDrive..."
-Get-Process OneDrive -ErrorAction SilentlyContinue | Stop-Process -Force
-
-# 2. Desabilitar inicialização automática (Registro)
-Write-Host "Removendo OneDrive da inicialização..."
-$runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
-Remove-ItemProperty -Path $runKey -Name "OneDrive" -ErrorAction SilentlyContinue
-
-# 3. Bloquear OneDrive via Política de Grupo (Registro)
-Write-Host "Aplicando política para desativar o OneDrive..."
-$policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive"
-if (!(Test-Path $policyPath)) {
-    New-Item -Path $policyPath -Force | Out-Null
-}
-
-Set-ItemProperty -Path $policyPath -Name "DisableFileSyncNGSC" -Type DWord -Value 1
-
-# 4. Desativar tarefas agendadas do OneDrive
-Write-Host "Desativando tarefas agendadas..."
-Get-ScheduledTask | Where-Object {
-    $_.TaskName -like "*OneDrive*"
-} | Disable-ScheduledTask -ErrorAction SilentlyContinue
-
-# 5. Desinstalar OneDrive (32 e 64 bits)
-Write-Host "Desinstalando OneDrive..."
-
-$onedriveSetup32 = "$env:SystemRoot\System32\OneDriveSetup.exe"
-$onedriveSetup64 = "$env:SystemRoot\SysWOW64\OneDriveSetup.exe"
-
-if (Test-Path $onedriveSetup64) {
-    Start-Process $onedriveSetup64 "/uninstall" -Wait
-} elseif (Test-Path $onedriveSetup32) {
-    Start-Process $onedriveSetup32 "/uninstall" -Wait
-}
-
-# 6. Remover pastas residuais
-Write-Host "Removendo pastas restantes..."
-$folders = @(
-    "$env:USERPROFILE\OneDrive",
-    "$env:LOCALAPPDATA\Microsoft\OneDrive",
-    "$env:PROGRAMDATA\Microsoft OneDrive"
-)
-
-foreach ($folder in $folders) {
-    if (Test-Path $folder) {
-        Remove-Item $folder -Recurse -Force -ErrorAction SilentlyContinue
+try {
+    $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds"
+    
+    if (!(Test-Path $regPath)) {
+        New-Item -Path $regPath -Force | Out-Null
     }
-}
-
-# 7. Ocultar OneDrive do Explorador de Arquivos
-Write-Host "Ocultando OneDrive do Explorer..."
-$clsidPath = "HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
-if (Test-Path $clsidPath) {
-    Set-ItemProperty -Path $clsidPath -Name "System.IsPinnedToNameSpaceTree" -Value 0 -ErrorAction SilentlyContinue
-}
-
-Write-Host "✔ OneDrive desativado e removido com sucesso." -ForegroundColor Green
-
-
-# ============================================
-# 17. DESABILITA E DESINSTALA O OUTLOOK
-# ============================================
-Write-Host "=== DESINSTALANDO MICROSOFT OUTLOOK ===" -ForegroundColor Cyan
-
-# 1. Encerrar processos do Outlook
-Write-Host "Encerrando processos do Outlook..."
-Get-Process OUTLOOK -ErrorAction SilentlyContinue | Stop-Process -Force
-
-# 2. Localizar Office Click-to-Run
-$officeC2R = "C:\Program Files\Common Files\Microsoft Shared\ClickToRun\OfficeClickToRun.exe"
-
-if (!(Test-Path $officeC2R)) {
-    Write-Error "Office Click-to-Run não encontrado. Outlook pode não estar instalado via Microsoft 365."
-    exit 1
-}
-
-# 3. Remover SOMENTE o Outlook
-Write-Host "Iniciando remoção do Outlook (mantendo Word, Excel etc)..."
-
-Start-Process $officeC2R `
-    -ArgumentList "scenario=install scenariosubtype=ARP sourcetype=None productstoremove=OutlookRetail.16_en-us displaylevel=false" `
-    -Wait
-
-# 4. Limpar atalhos
-Write-Host "Removendo atalhos..."
-$shortcuts = @(
-    "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Outlook.lnk",
-    "$env:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\Outlook.lnk"
-)
-
-foreach ($s in $shortcuts) {
-    if (Test-Path $s) {
-        Remove-Item $s -Force
+    
+    # Desativar completamente o recurso
+    Set-ItemProperty -Path $regPath -Name "EnableFeeds" -Type DWord -Value 0 -Force
+    
+    # Também desativar no usuário atual (reforço)
+    $userPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Feeds"
+    if (!(Test-Path $userPath)) {
+        New-Item -Path $userPath -Force | Out-Null
     }
+    Set-ItemProperty -Path $userPath -Name "ShellFeedsTaskbarViewMode" -Type DWord -Value 2 -Force
+    
+    Write-Success "Widget de Notícias desativado"
+} catch {
+    Write-Error-Custom "Erro ao desativar Widget de Notícias: $_"
 }
 
-# 5. Remover inicialização automática (se existir)
-Write-Host "Limpando inicialização..."
-$runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
-Remove-ItemProperty -Path $runKey -Name "Outlook" -ErrorAction SilentlyContinue
+# ============================================
+# 15. DESATIVAR WINDOWS COPILOT
+# ============================================
+Write-Step "Desativando Windows Copilot..."
 
-Write-Host "✔ Outlook desinstalado com sucesso." -ForegroundColor Green
-
-
-
+try {
+    # 1. Desativar via Política (oficial)
+    $copilotPolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot"
+    
+    if (!(Test-Path $copilotPolicyPath)) {
+        New-Item -Path $copilotPolicyPath -Force | Out-Null
+    }
+    
+    Set-ItemProperty -Path $copilotPolicyPath -Name "TurnOffWindowsCopilot" -Type DWord -Value 1 -Force
+    
+    # 2. Remover botão da barra de tarefas (usuário)
+    $userCopilotPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+    Set-ItemProperty -Path $userCopilotPath -Name "ShowCopilotButton" -Type DWord -Value 0 -Force -ErrorAction SilentlyContinue
+    
+    # 3. Remover Copilot AppX (se existir)
+    $copilotPackages = Get-AppxPackage -AllUsers | Where-Object {
+        $_.Name -match "Copilot"
+    }
+    
+    foreach ($pkg in $copilotPackages) {
+        Write-Host "  Removendo pacote: $($pkg.Name)"
+        Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction SilentlyContinue
+    }
+    
+    Write-Success "Copilot desativado/removido"
+} catch {
+    Write-Error-Custom "Erro ao desativar Copilot: $_"
+}
 
 # ============================================
-# 14. COPIAR PASTA MICRO PARA DOCUMENTOS
+# 16. DESABILITAR E DESINSTALAR ONEDRIVE
 # ============================================
+Write-Step "Desativando e removendo OneDrive..."
 
+try {
+    # 1. Encerrar processo do OneDrive
+    Get-Process OneDrive -ErrorAction SilentlyContinue | Stop-Process -Force
+    
+    # 2. Desabilitar inicialização automática (Registro)
+    $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+    Remove-ItemProperty -Path $runKey -Name "OneDrive" -ErrorAction SilentlyContinue
+    
+    # 3. Bloquear OneDrive via Política de Grupo (Registro)
+    $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive"
+    if (!(Test-Path $policyPath)) {
+        New-Item -Path $policyPath -Force | Out-Null
+    }
+    
+    Set-ItemProperty -Path $policyPath -Name "DisableFileSyncNGSC" -Type DWord -Value 1
+    
+    # 4. Desativar tarefas agendadas do OneDrive
+    Get-ScheduledTask | Where-Object {
+        $_.TaskName -like "*OneDrive*"
+    } | Disable-ScheduledTask -ErrorAction SilentlyContinue
+    
+    # 5. Desinstalar OneDrive (32 e 64 bits)
+    $onedriveSetup32 = "$env:SystemRoot\System32\OneDriveSetup.exe"
+    $onedriveSetup64 = "$env:SystemRoot\SysWOW64\OneDriveSetup.exe"
+    
+    if (Test-Path $onedriveSetup64) {
+        Start-Process $onedriveSetup64 "/uninstall" -Wait
+    } elseif (Test-Path $onedriveSetup32) {
+        Start-Process $onedriveSetup32 "/uninstall" -Wait
+    }
+    
+    # 6. Remover pastas residuais
+    $folders = @(
+        "$env:USERPROFILE\OneDrive",
+        "$env:LOCALAPPDATA\Microsoft\OneDrive",
+        "$env:PROGRAMDATA\Microsoft OneDrive"
+    )
+    
+    foreach ($folder in $folders) {
+        if (Test-Path $folder) {
+            Remove-Item $folder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+    
+    # 7. Ocultar OneDrive do Explorador de Arquivos
+    $clsidPath = "Registry::HKEY_CLASSES_ROOT\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
+    if (Test-Path $clsidPath) {
+        Set-ItemProperty -Path $clsidPath -Name "System.IsPinnedToNameSpaceTree" -Value 0 -ErrorAction SilentlyContinue
+    }
+    
+    Write-Success "OneDrive desativado e removido"
+} catch {
+    Write-Error-Custom "Erro ao remover OneDrive: $_"
+}
+
+# ============================================
+# 17. DESABILITAR E DESINSTALAR OUTLOOK (OPCIONAL)
+# ============================================
+Write-Step "Desinstalando Microsoft Outlook..."
+
+try {
+    # 1. Encerrar processos do Outlook
+    Get-Process OUTLOOK -ErrorAction SilentlyContinue | Stop-Process -Force
+    
+    # 2. Localizar Office Click-to-Run
+    $officeC2R = "C:\Program Files\Common Files\Microsoft Shared\ClickToRun\OfficeClickToRun.exe"
+    
+    if (Test-Path $officeC2R) {
+        # 3. Remover SOMENTE o Outlook
+        Start-Process $officeC2R `
+            -ArgumentList "scenario=install scenariosubtype=ARP sourcetype=None productstoremove=OutlookRetail.16_en-us displaylevel=false" `
+            -Wait
+        
+        # 4. Limpar atalhos
+        $shortcuts = @(
+            "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Outlook.lnk",
+            "$env:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\Outlook.lnk"
+        )
+        
+        foreach ($s in $shortcuts) {
+            if (Test-Path $s) {
+                Remove-Item $s -Force
+            }
+        }
+        
+        # 5. Remover inicialização automática (se existir)
+        $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+        Remove-ItemProperty -Path $runKey -Name "Outlook" -ErrorAction SilentlyContinue
+        
+        Write-Success "Outlook desinstalado"
+    } else {
+        Write-Host "  Office Click-to-Run não encontrado. Outlook pode não estar instalado."
+    }
+} catch {
+    Write-Error-Custom "Erro ao desinstalar Outlook: $_"
+}
+
+# ============================================
+# 18. BAIXAR PASTA 'MICRO' DO GITHUB E CONFIGURAR
+# ============================================
 Write-Step "Baixando pasta 'micro' do GitHub..."
 
-$repoZipUrl = "https://github.com/WeslleySantosIn/SEU_REPOSITORIO/archive/refs/heads/main.zip"
-$tempZip = "$env:TEMP\repo.zip"
-$tempExtract = "$env:TEMP\repo_extract"
-
-Invoke-WebRequest -Uri $repoZipUrl -OutFile $tempZip -UseBasicParsing
-
-if (Test-Path $tempExtract) {
-    Remove-Item $tempExtract -Recurse -Force
-}
-
-Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
-
-# 🔑 Descobrir automaticamente a pasta raiz extraída
-$repoRoot = Get-ChildItem $tempExtract | Where-Object { $_.PSIsContainer } | Select-Object -First 1
-
-if (-not $repoRoot) {
-    throw "Não foi possível identificar a pasta raiz do repositório."
-}
-
-$microSourcePath = Join-Path $repoRoot.FullName "micro"
-
-if (-not (Test-Path $microSourcePath)) {
-    throw "A pasta 'micro' não foi encontrada dentro do repositório."
-}
-
-$documentsPath = [Environment]::GetFolderPath("MyDocuments")
-$microDestPath = Join-Path $documentsPath "micro"
-
-if (Test-Path $microDestPath) {
-    Remove-Item $microDestPath -Recurse -Force
-}
-
-Copy-Item -Path $microSourcePath -Destination $microDestPath -Recurse -Force
-
-Write-Success "Pasta 'micro' copiada com sucesso para Documentos"
-
+try {
+    # IMPORTANTE: Substitua SEU_USUARIO pelo seu username do GitHub
+    $repoZipUrl = "https://github.com/WeslleySantosIn/windows-optimizer/archive/refs/heads/main.zip"
+    $tempZip = "$env:TEMP\repo.zip"
+    $tempExtract = "$env:TEMP\repo_extract"
+    
+    # Baixar repositório
+    Write-Host "  Baixando repositório..."
+    Invoke-WebRequest -Uri $repoZipUrl -OutFile $tempZip -UseBasicParsing
+    
+    # Limpar pasta de extração se existir
+    if (Test-Path $tempExtract) {
+        Remove-Item $tempExtract -Recurse -Force
+    }
+    
+    # Extrair ZIP
+    Write-Host "  Extraindo arquivos..."
+    Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+    
+    # Descobrir automaticamente a pasta raiz extraída
+    $repoRoot = Get-ChildItem $tempExtract | Where-Object { $_.PSIsContainer } | Select-Object -First 1
+    
+    if (-not $repoRoot) {
+        throw "Não foi possível identificar a pasta raiz do repositório."
+    }
+    
+    $microSourcePath = Join-Path $repoRoot.FullName "micro"
+    
+    if (-not (Test-Path $microSourcePath)) {
+        Write-Host "  Pasta 'micro' não encontrada no repositório. Pulando esta etapa..."
+    } else {
+        # Copiar para Documentos
+        $documentsPath = [Environment]::GetFolderPath("MyDocuments")
+        $microDestPath = Join-Path $documentsPath "micro"
+        
+        if (Test-Path $microDestPath) {
+            Remove-Item $microDestPath -Recurse -Force
+        }
+        
+        Copy-Item -Path $microSourcePath -Destination $microDestPath -Recurse -Force
+        Write-Success "Pasta 'micro' copiada para Documentos"
         
         # ============================================
         # CONFIGURAR PAPEL DE PAREDE E TELA DE BLOQUEIO
         # ============================================
         Write-Step "Configurando papel de parede e tela de bloqueio..."
         
-        # Caminho da imagem
         $wallpaperFileName = "foto_de_fundo_grupoprima.png"
         $wallpaperPath = Join-Path $microDestPath $wallpaperFileName
         
-        # Verificar se a imagem existe
         if (Test-Path $wallpaperPath) {
             try {
                 # Adicionar tipo para manipular wallpaper
@@ -678,7 +741,6 @@ public class Wallpaper {
                     New-Item -Path $lockScreenPath -Force | Out-Null
                 }
                 
-                # Definir imagem da tela de bloqueio
                 Set-ItemProperty -Path $lockScreenPath -Name "LockScreenImage" -Value $wallpaperPath -Type String -Force
                 
                 # Também configurar para o usuário atual
@@ -694,7 +756,7 @@ public class Wallpaper {
                 }
                 Copy-Item -Path $wallpaperPath -Destination "$wallpaperDestPath\TranscodedWallpaper" -Force
                 
-                # Configurar também via registro do usuário para garantir
+                # Configurar também via registro do usuário
                 $personalizationPath = "HKCU:\Control Panel\Desktop"
                 Set-ItemProperty -Path $personalizationPath -Name "Wallpaper" -Value $wallpaperPath -Force
                 
@@ -708,15 +770,19 @@ public class Wallpaper {
             Write-Host "  Imagem '$wallpaperFileName' não encontrada na pasta 'micro'"
             Write-Host "  Pulando configuração de papel de parede..."
         }
-        
-    } else {
-        Write-Host "  Pasta 'micro' não encontrada. Pulando esta etapa..."
-        Write-Host "  Procurado em: $microSourcePath"
     }
-
+    
+    # Limpar arquivos temporários
+    Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
+    Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
+    
+} catch {
+    Write-Error-Custom "Erro ao baixar pasta 'micro': $_"
+    Write-Host "  Verifique se o repositório existe e está público"
+}
 
 # ============================================
-# 15. LIMPEZA DO SISTEMA
+# 19. LIMPEZA DO SISTEMA
 # ============================================
 Write-Step "Executando limpeza do sistema..."
 
@@ -748,15 +814,20 @@ Write-ColorOutput Green "✓ Serviços desnecessários desativados"
 Write-ColorOutput Green "✓ Cortana desativada"
 Write-ColorOutput Green "✓ Telemetria removida"
 Write-ColorOutput Green "✓ Anúncios desativados"
+Write-ColorOutput Green "✓ Widget de Notícias desativado"
+Write-ColorOutput Green "✓ Copilot desativado"
+Write-ColorOutput Green "✓ OneDrive removido"
+Write-ColorOutput Green "✓ Outlook desinstalado"
 Write-ColorOutput Green "✓ Privacidade configurada (localização, câmera e microfone mantidos)"
 Write-ColorOutput Green "✓ Apps em segundo plano desativados"
-Write-ColorOutput Green "✓ Desempenho otimizado"
+Write-ColorOutput Green "✓ Efeitos visuais otimizados (melhor desempenho + fontes suaves + sombras)"
+Write-ColorOutput Green "✓ Memória virtual configurada (8GB inicial / 16GB máximo)"
 Write-ColorOutput Green "✓ Alto desempenho ativado"
 Write-ColorOutput Green "✓ Hibernação desativada"
 Write-ColorOutput Green "✓ Bloatware removido"
 Write-ColorOutput Green "✓ Windows Update configurado"
 Write-ColorOutput Green "✓ Google Chrome instalado"
-Write-ColorOutput Green "✓ Pasta 'micro' copiada para Documentos"
+Write-ColorOutput Green "✓ Pasta 'micro' baixada do GitHub"
 Write-ColorOutput Green "✓ Papel de parede e tela de bloqueio configurados"
 Write-ColorOutput Green "✓ Sistema limpo"
 
