@@ -796,6 +796,20 @@ public class Wallpaper {
     Write-Host "  Verifique se o repositório existe e está público"
 }
 
+$edgePaths = @(
+    "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+    "$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe"
+)
+
+$edgeExe = $edgePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+if ($edgeExe) {
+    Start-Process $edgeExe "https://drive.google.com/drive/folders/1k5BSZVLmBrR4-FLR8yjY1saCR97yv4fD?usp=drive_link"
+} else {
+    Write-Host "Microsoft Edge não encontrado"
+}
+
+
 # ============================================
 # 19. INSTALAÇÃO DE APP
 # ============================================
