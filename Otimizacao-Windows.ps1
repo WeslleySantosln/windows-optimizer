@@ -202,6 +202,17 @@ if ($modoJogos) {
     )
 }
 
+if ($modoJogos) {
+    # Desligar a compactação de memória. Precisa rodar ANTES de desativar o SysMain
+    # (logo abaixo), porque é esse serviço que aplica a configuração.
+    try {
+        Disable-MMAgent -MemoryCompression -ErrorAction Stop
+        Write-Success "Compactação de memória desativada"
+    } catch {
+        Write-Error-Custom "Erro ao desativar a compactação de memória: $_"
+    }
+}
+
 foreach ($service in $servicesToDisable) {
     try {
         $svc = Get-Service -Name $service -ErrorAction SilentlyContinue
@@ -1076,6 +1087,7 @@ if ($executeOptimization) {
         Write-ColorOutput Green "✓ Gravação de jogos (Game DVR) desativada; controle Xbox mantido"
         Write-ColorOutput Green "✓ Modo de Jogo, agendamento de GPU e otimização de jogos em janela ligados"
         Write-ColorOutput Green "✓ Mouse sem aceleração e atalhos de Teclas de Aderência desligados"
+        Write-ColorOutput Green "✓ Compactação de memória desativada"
         Write-ColorOutput Green "✓ OneDrive removido"
     } else {
         Write-ColorOutput Green "✓ Privacidade configurada (localização, câmera e microfone mantidos)"
