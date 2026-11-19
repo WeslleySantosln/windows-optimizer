@@ -1,0 +1,202 @@
+=====================================================================
+ GPEDIT - O QUE DESATIVAR (TELEMETRIA / PRIVACIDADE / JOGOS)
+ Fonte: config gpedit.pdf (24 capturas de tela)
+ Uso: Windows dedicado somente para jogos
+=====================================================================
+
+COMO USAR
+---------
+1) Win + R  ->  gpedit.msc  ->  Enter
+2) Todos os caminhos abaixo começam em:
+      Configuração do Computador > Modelos Administrativos
+3) Dê dois cliques na política, marque o estado indicado e clique OK.
+4) Ao terminar, abra o CMD como administrador e rode:  gpupdate /force
+   (ou reinicie o PC).
+
+ATENÇÃO
+- No gpedit muita coisa se desliga marcando "Habilitado"
+  (ex.: "Desativar X" = Habilitado). Siga EXATAMENTE o estado indicado.
+- Na coluna "Estado" o gpedit mostra "Desativado"; dentro da janela
+  da política a opção se chama "Desabilitado". É a mesma coisa.
+- Itens marcados com (*) têm uma observação logo abaixo.
+
+Total: 43 políticas.
+
+
+=====================================================================
+ 1. TELEMETRIA E COLETA DE DADOS
+=====================================================================
+
+Componentes do Windows > Coleta de Dados e Compilações de Visualização
+[ ] Permitir Dados de Diagnóstico .................... Desabilitado (*)
+    (*) No Windows Pro, "Desabilitado" só remove a política e deixa o
+        controle em Configurações > Privacidade. Para TRAVAR no mínimo,
+        prefira: Habilitado + opção "Dados de diagnóstico desativados"
+        (no Pro o Windows aplica o nível mínimo, "Obrigatório").
+
+Componentes do Windows > Compatibilidade de Aplicativos
+[ ] Desativar a Telemetria de Aplicativos ............ Habilitado
+[ ] Desativar o Mecanismo de Compatibilidade de Aplicativos .. Habilitado (*)
+[ ] Desativar o Auxiliar de Compatibilidade de Programa ...... Habilitado
+[ ] Desativar o Coletor de Inventário ................ Habilitado
+[ ] Desativar o Mecanismo de Compatibilidade de SwitchBack ... Habilitado (*)
+[ ] Desativar o Gravador de Passos ................... Habilitado
+    (*) Esses dois desligam as correções de compatibilidade de programas
+        antigos. Se algum jogo/programa antigo parar de abrir, volte os
+        dois para "Não Configurado".
+
+Componentes do Windows > Relatórios de Erros do Windows
+[ ] Desabilitar Relatório de Erros do Windows ........ Habilitado
+[ ] Desabilitar log .................................. Habilitado
+
+Sistema > Perfis de usuário
+[ ] Desligar a ID de anúncio ......................... Habilitado
+
+Sistema > Políticas do SO
+[ ] Permitir upload de Atividades do Usuário ......... Desabilitado
+[ ] Permitir publicação das Atividades do Usuário .... Desabilitado
+[ ] Permitir sincronização da Área de Transferência entre dispositivos .. Desabilitado
+[ ] Habilita o Feed de Atividades .................... Desabilitado
+
+
+=====================================================================
+ 2. NUVEM, CONTA MICROSOFT E SINCRONIZAÇÃO
+=====================================================================
+
+Componentes do Windows > Conteúdo de Nuvem
+[ ] Desativar o conteúdo otimizado em nuvem .......... Habilitado
+[ ] Desligue o conteúdo do estado da conta do consumidor na nuvem .. Habilitado
+[ ] Não mostrar dicas do Windows ..................... Habilitado
+[ ] Desativar as experiências do cliente da Microsoft  Habilitado
+
+Componentes do Windows > Sincronizar suas configurações
+[ ] Não sincronizar .................................. Habilitado
+
+Componentes do Windows > Explorador de Arquivos
+[ ] Desativar insights baseados em conta, arquivos recentes,
+    favoritos e recomendados no Explorador de Arquivos  Habilitado
+
+Componentes do Windows > Instalação por Push
+[ ] Desativar o serviço Instalação por Push .......... Habilitado
+
+
+=====================================================================
+ 3. PESQUISA
+=====================================================================
+
+Componentes do Windows > Pesquisar
+[ ] Permitir Cortana ................................. Desabilitado
+[ ] Permitir Pesquisa na Nuvem ....................... Desabilitado
+[ ] Permitir destaques de pesquisa ................... Desabilitado
+[ ] Permitir que pesquisa e Cortana usem a localização  Desabilitado
+[ ] Sempre usar a detecção automática de idioma ao
+    indexar conteúdo e propriedades .................. Desabilitado
+[ ] Definir as informações que são compartilhadas na pesquisa
+    ......... Habilitado -> Tipo de informações: "Informações anônimas" (*)
+    (*) O próprio gpedit avisa que essa política só vale no Windows 8.1;
+        no Windows 10/11 não tem efeito. Opcional.
+
+
+=====================================================================
+ 4. LOCALIZAÇÃO E RASTREAMENTO
+=====================================================================
+
+Componentes do Windows > Local e sensores > Localizador do Windows
+[ ] Desativar fornecedor de local do Windows ......... Habilitado
+
+Componentes do Windows > Localizar Meu Dispositivo
+[ ] ativar/desativar Localizar Meu Dispositivo ....... Desabilitado
+
+
+=====================================================================
+ 5. APPS EM SEGUNDO PLANO
+=====================================================================
+
+Componentes do Windows > Privacidade de Aplicativos
+[ ] Permitir que os aplicativos do Windows sejam executados em
+    segundo plano ......... Habilitado -> Padrão para todos: "Forçar Negação" (*)
+[ ] Permitir que aplicativos do Windows acessem movimentos do usuário
+    enquanto estiverem em execução em segundo plano
+    ....................... Habilitado -> Padrão para todos: "Forçar Negação"
+    (*) Vale para apps da Microsoft Store. Se algum app da Loja (ex.: app
+        Xbox) parar de baixar/notificar em segundo plano, volte para
+        "Não Configurado".
+
+
+=====================================================================
+ 6. IA DO WINDOWS
+=====================================================================
+
+Componentes do Windows > IA do Windows
+[ ] Desabilitar Click to Do .......................... Habilitado
+[ ] Desabilitar a experiência de pesquisa agêntica de Configurações .. Habilitado
+
+
+=====================================================================
+ 7. CONTROLE POR VOZ
+=====================================================================
+
+Componentes do Windows > Controle por voz
+[ ] Permitir a Atualização Automática de Dados de Fala  Desabilitado
+
+
+=====================================================================
+ 8. WIDGETS
+=====================================================================
+
+Componentes do Windows > Widgets
+[ ] Permitir widgets ................................. Desabilitado
+[ ] Desabilitar Widgets na Tela de Bloqueio .......... Habilitado
+[ ] Desabilitar o Quadro de Widgets .................. Habilitado
+
+
+=====================================================================
+ 9. MICROSOFT EDGE (não carregar em segundo plano)
+=====================================================================
+
+Componentes do Windows > Microsoft Edge
+[ ] Permitir que o Microsoft Edge inicie e carregue a página Inicial e
+    Nova Guia na inicialização do Windows e cada vez que o Microsoft
+    Edge for fechado
+    ......... Habilitado -> opção: "Impedir o pré-carregamento de guia"
+[ ] Permitir a pré-inicialização do Microsoft Edge na inicialização do
+    Windows, quando o sistema estiver ocioso e sempre que o Microsoft
+    Edge for fechado
+    ......... Habilitado -> opção: impedir a pré-inicialização
+
+
+=====================================================================
+ 10. MICROSOFT STORE (LOJA)
+=====================================================================
+
+Componentes do Windows > Loja
+[ ] Desabilitar Download e Instalação Automáticos de Atualizações .. Habilitado
+
+
+=====================================================================
+ 11. WINDOWS UPDATE
+=====================================================================
+
+Componentes do Windows > Windows Update > Gerenciar a experiência do usuário final
+[ ] Configurar Atualizações Automáticas
+    ......... Habilitado -> "2 - Avisar antes de baixar e instalar automaticamente"
+              (deixar "A cada semana" marcado)
+[ ] Opções de exibição de notificações de atualização
+    ......... Habilitado -> "1 - Desabilitar todas as notificações, exceto
+              os avisos de reinício"
+    Obs.: com essas duas juntas o Windows quase não vai avisar que tem
+    atualização. Entre em Configurações > Windows Update de vez em quando
+    e instale manualmente (principalmente as de segurança).
+
+
+=====================================================================
+ 12. MENU INICIAR
+=====================================================================
+
+Menu Iniciar e Barra de Tarefas
+[ ] Não manter histórico de documentos abertos recentemente .. Habilitado
+
+
+=====================================================================
+ FIM - 43 políticas
+=====================================================================

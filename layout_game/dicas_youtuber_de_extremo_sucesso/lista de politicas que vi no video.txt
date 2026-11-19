@@ -1,0 +1,22 @@
+Coleta de Dados e Telemetria:
+
+Desativou a permissão para coleta de dados de diagnóstico.
+Desativou a telemetria em "Compatibilidade de Aplicativos".
+Desativou mecanismos de compatibilidade de programas e o coletor de inventário.
+Privacidade e Nuvem:
+
+Desativou o conteúdo otimizado da nuvem.
+Desativou o localizador do Windows e sensores.
+Desativou a pesquisa na nuvem e o destaque de pesquisa.
+Desativou a detecção automática de idioma na pesquisa.
+Configurou para não permitir aplicativos em segundo plano.
+Desativou o ID de anúncios.
+Experiência do Usuário e Sistema:
+
+Desativou a atualização automática de controle por voz.
+Desativou o download e a instalação automática de itens da Loja.
+Impediu o pré-carregamento e a pré-inicialização do Microsoft Edge.
+Desativou relatórios de erro do Windows e seus logs.
+Desativou a sincronização de configurações.
+Configurou o Windows Update para avisar antes de baixar e instalar atualizações, em vez de fazer tudo automaticamente.
+Desativou o feed de atividades, sincronização de área de trabalho e publicação de atividades do sistema 
